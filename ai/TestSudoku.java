@@ -9,8 +9,14 @@ public class TestSudoku {
 		
 		String[] gridStr = getGrid();
 		SudokuGrid grid = SudokuGrid.getGrid(gridStr, 3, 3);
-		grid.solve(0, 0);
+		grid.solve();
 		System.out.println(grid);
+		System.out.println("Nodes expanded: " + grid.numNodesExpanded());
+//		String[] gridStr = getGrid();
+//		SudokuGridDFS grid = SudokuGridDFS.getGrid(gridStr, 3, 3);
+//		grid.solve(0, 0);
+//		System.out.println(grid);
+//		System.out.println("Nodes expanded: " + grid.numNodesExpanded());
 
 	}
 
@@ -18,10 +24,10 @@ public class TestSudoku {
 		List<String> board = new ArrayList<String>() {
 			private static final long serialVersionUID = 1L;
 			{
-				{add("3,_,_,_,_,_,_,_,_"); }
 				{add("_,_,_,_,_,_,_,_,_"); }
 				{add("_,_,_,_,_,_,_,_,_"); }
 				{add("_,_,_,_,_,_,_,_,_"); }
+				{add("_,_,_,3,_,_,_,_,_"); }
 				{add("_,_,_,_,_,_,_,_,_"); }
 				{add("_,_,_,_,_,_,_,_,_"); }
 				{add("_,_,_,_,_,_,_,_,_"); }
