@@ -1,19 +1,16 @@
 package ai;
 
-import java.util.Arrays;
-
-public class SudokuGridDFS {
-	int m_size;
-	int m_subRow;
-	int m_subCol;
-	
-	Cell[][] m_grid;
+public class SudokuGridDFS extends SudokuGrid {
 	
 	private SudokuGridDFS(Cell[][] grid, int subRow, int subCol) {
 		m_size = grid.length;
 		m_grid = grid;
 		m_subRow = subRow;
 		m_subCol = subCol;
+	}
+	
+	@Override public boolean solve() {
+		return solve(0, 0);
 	}
 	
 	public static SudokuGridDFS getGrid(String[] gridInput, int subRow, int subCol) {
@@ -28,10 +25,6 @@ public class SudokuGridDFS {
 		return new SudokuGridDFS(grid, subRow, subCol);
 	}
 	
-	int m_numNodesExpanded = 0;
-	int numNodesExpanded() {
-		return m_numNodesExpanded;
-	}
 	public boolean solve(int row, int col) {
 		m_numNodesExpanded++;
 		if(row == m_size) return true;
@@ -64,12 +57,5 @@ public class SudokuGridDFS {
 				return false;
 			}
 		return true;
-	}
-	
-	@Override public String toString() {
-		StringBuffer buff = new StringBuffer();
-		for(Cell[] row: m_grid)
-			buff.append(Arrays.toString(row) + "\n");
-		return buff.toString();
 	}
 }

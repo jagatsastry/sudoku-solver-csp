@@ -57,7 +57,7 @@ public class Cell implements Comparable<Cell> {
 	}
 	
 	@Override public String toString() {
-		return "" + m_val; // + "[" + m_row + "," + m_col + "]";
+		return "" + m_val + "[" + m_row + "," + m_col + "]";
 	}
 
 	@Override
