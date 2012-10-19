@@ -1,36 +1,35 @@
 package ai;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.TreeSet;
 
-public class SudokuGridFwdChecking {
-	int m_size;
-	int m_subRow;
-	int m_subCol;
-	
-	Cell[][] m_grid;
-	//TreeSet<Cell> m_constrainedCells = new TreeSet<Cell>();
+public class SudokuGridFwdChecking extends SudokuGrid {
+
 	TreeSet<Cell> m_constrainedCells = new TreeSet<Cell>();
 	
-	private SudokuGridFwdChecking(Cell[][] grid, int subRow, int subCol) {
+	private SudokuGridFwdChecking(Cell[][] grid, int subRow, int subCol)  {
 		m_size = grid.length;
 		m_grid = grid;
 		m_subRow = subRow;
 		m_subCol = subCol;
 		for(Cell[] row: grid)
 			for(Cell cell: row) {
-				if(!this.m_constrainedCells.contains(cell)) {
+				if(!new HashSet<Cell>(this.m_constrainedCells).contains(cell)) {
 					this.m_constrainedCells.add(cell);
 					if(cell.solved()) {
-						this.setVal(cell, cell.val());
+						try {
+							this.setVal(cell, cell.val());
+						} catch (FwdCheckFailedException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
 					}
 				}
 			}
 	}
-	boolean m_dfs = true;
 	private Cell getNextUnoccupiedCell() {
 		
 		for(Iterator<Cell> iter = this.m_constrainedCells.descendingIterator();
@@ -42,7 +41,8 @@ public class SudokuGridFwdChecking {
 		return null;
 	}
 	
-	public static SudokuGridFwdChecking getGrid(String[] gridInput, int subRow, int subCol) {
+	public static SudokuGrid getGrid(String[] gridInput, int subRow, int subCol)  {
+		
 		int n = gridInput.length;
 		Cell[][] grid = new Cell[n][n]; 
 		for(int i = 0; i < gridInput.length; i++) {
@@ -55,11 +55,7 @@ public class SudokuGridFwdChecking {
 		return new SudokuGridFwdChecking(grid, subRow, subCol);
 	}
 	
-	int m_numNodesExpanded = 0;
-	int numNodesExpanded() {
-		return this.m_numNodesExpanded;
-	}
-	public boolean solve() {
+	@Override public boolean solve() {
 		m_numNodesExpanded++;
 		Cell cell = this.getNextUnoccupiedCell();
 		if(cell == null) return true;
@@ -67,23 +63,35 @@ public class SudokuGridFwdChecking {
 		for(int val = 1; val <= m_size; val++) {
 			if(cell.constraints().contains(val)) continue;
 			if(this.valid(cell.row(), cell.col(), val)) {
-				List<Cell> modifiedCells = setVal(cell, val); //m_grid[row][col].setVal(val);
+				int prevVal = cell.val();
+				List<Cell> modifiedCells = null;
+				try {
+					modifiedCells = setVal(cell, val); //m_grid[row][col].setVal(val);
+				} catch(FwdCheckFailedException e) {
+					continue;
+				}
 				if(this.solve())
 					return true;
-				resetVal(modifiedCells, val); //m_grid[row][col].setVal(Cell.DEF);
+				cell.setVal(prevVal);
+				try {
+					resetVal(modifiedCells, val);
+				} catch (FwdCheckFailedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} //m_grid[row][col].setVal(Cell.DEF);
 			}
 		}
 		return false;	
 	}
     
-	private void resetVal(List<Cell> modifiedCells, int k) {
+	private void resetVal(List<Cell> modifiedCells, int k) throws FwdCheckFailedException {
 		for(Cell cell: modifiedCells) {
 			cell.constraints().remove(k);
 			updateTree(cell);
 		}
 	}
 	
-	private List<Cell> setVal(Cell cell, int val) {
+	private List<Cell> setVal(Cell cell, int val) throws FwdCheckFailedException {
 		cell.setVal(val);
 		List<Cell> constraints = addConstraints(cell, val);
 		for(Cell cell1: constraints)
@@ -92,15 +100,32 @@ public class SudokuGridFwdChecking {
 	}
 	
 	
-	private void updateTree(Cell cell) {
+	private void updateTree(Cell cell) throws FwdCheckFailedException {
 		
-		if(this.m_constrainedCells.contains(cell)) {
+		if(cell.constraintSize() == this.m_size)
+			throw new FwdCheckFailedException(cell);
+		
+		if(new HashSet<Cell>(this.m_constrainedCells).contains(cell)) {
 			this.m_constrainedCells.remove(cell);
 			this.m_constrainedCells.add(cell);
 		}
 	}
 	
-	private List<Cell> addConstraints(Cell cell, int k) {
+	public static class FwdCheckFailedException extends Exception {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+		private Cell m_cell;
+		public FwdCheckFailedException(Cell cell) {
+			m_cell = cell;
+		}
+		public Cell getResponsibleCell() {
+			return m_cell;
+		}
+	}
+	
+	private List<Cell> addConstraints(Cell cell, int k) throws FwdCheckFailedException {
 		
 		List<Cell> updatedCells = new ArrayList<Cell>(m_size);
 		for(int ind = 0; ind < m_size; ind++) {
@@ -111,7 +136,7 @@ public class SudokuGridFwdChecking {
 				updateTree(colCell);
 			}
 			Cell rowCell = m_grid[cell.row()][ind];
-			if(cell.col() != ind && rowCell.constraints().contains(k)) {
+			if(cell.col() != ind && !rowCell.constraints().contains(k)) {
 				rowCell.constraints().add(k);
 				updatedCells.add(rowCell);
 				updateTree(rowCell);
@@ -123,7 +148,7 @@ public class SudokuGridFwdChecking {
 			for(int j = n; j < n + m_subCol; j++) {
 				if(i == cell.row() && j == cell.col()) continue;
 				Cell groupCell = m_grid[i][j];
-				if(!this.m_grid[i][j].constraints().contains(k)) {
+				if(!groupCell.constraints().contains(k)) {
 					groupCell.constraints().add(k);
 					updatedCells.add(groupCell);
 					updateTree(groupCell);
@@ -150,10 +175,4 @@ public class SudokuGridFwdChecking {
 		return true;
 	}
 	
-	@Override public String toString() {
-		StringBuffer buff = new StringBuffer();
-		for(Cell[] row: m_grid)
-			buff.append(Arrays.toString(row) + "\n");
-		return buff.toString();
-	}
 }

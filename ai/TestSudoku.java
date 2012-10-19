@@ -6,10 +6,10 @@ import java.util.List;
 public class TestSudoku {
 
 	public static enum Method {
-		DFS, MRV;
+		DFS, MRV, FWDCK;
 	}
 	
-	static final Method METHOD = Method.MRV; 
+	static final Method METHOD = Method.FWDCK; 
 
 	public static void main(String[] args) {
 		String[] gridStr = getGrid();
@@ -19,6 +19,9 @@ public class TestSudoku {
 				break;
 			case DFS:
 				grid = SudokuGridDFS.getGrid(gridStr, 3, 3);
+				break;
+			case FWDCK:
+				grid = SudokuGridFwdChecking.getGrid(gridStr, 3, 3);
 				break;
 		}
 		grid.solve();
