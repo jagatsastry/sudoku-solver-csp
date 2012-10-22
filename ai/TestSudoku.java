@@ -9,7 +9,7 @@ public class TestSudoku {
 		DFS, MRV, FWDCK;
 	}
 	
-	static final Method METHOD = Method.FWDCK; 
+	static final Method METHOD = Method.MRV; 
 
 	public static void main(String[] args) {
 		String[] gridStr = getGrid();
@@ -24,10 +24,10 @@ public class TestSudoku {
 				grid = SudokuGridFwdChecking.getGrid(gridStr, 3, 3);
 				break;
 		}
-		grid.solve();
+		boolean solved = grid.solve();
 		System.out.println(grid);
 		System.out.println("Method: " + METHOD);
-		System.out.println("Solved? " + grid.solve());
+		System.out.println("Solved? " + solved);
 		System.out.println("Nodes expanded: " + grid.numNodesExpanded());
 
 	}
