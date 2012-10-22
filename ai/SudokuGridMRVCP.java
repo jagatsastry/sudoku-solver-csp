@@ -2,42 +2,15 @@ package ai;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import java.util.TreeSet;
 
 public class SudokuGridMRVCP extends SudokuGrid {
 
-	TreeSet<Cell> m_constrainedCells = new TreeSet<Cell>();
-	
 	private SudokuGridMRVCP(Cell[][] grid, int subRow, int subCol) {
-		m_size = grid.length;
-		m_grid = grid;
-		m_subRow = subRow;
-		m_subCol = subCol;
-		for(Cell[] row: grid)
-			for(Cell cell: row) {
-				if(!new HashSet<Cell>(this.m_constrainedCells).contains(cell)) {
-					this.m_constrainedCells.add(cell);
-					if(cell.solved()) {
-						this.setVal(cell, cell.val());
-					}
-				}
-			}
-	}
-	private Cell getNextUnoccupiedCell() {
-		
-		for(Iterator<Cell> iter = this.m_constrainedCells.descendingIterator();
-				iter.hasNext();) {
-			Cell cell = iter.next();
-			if(!cell.solved())
-				return cell;
-		}
-		return null;
+		super(grid, subRow, subCol);
 	}
 	
 	public static SudokuGridMRVCP getGrid(String[] gridInput, int subRow, int subCol) {
@@ -48,17 +21,16 @@ public class SudokuGridMRVCP extends SudokuGrid {
 			String row = gridInput[i];
 			String[] cellChars = row.split(",");
 			for(int j = 0; j < cellChars.length; j++) {
-				grid[i][j] = Cell.getCell(cellChars[j].charAt(0), i, j);
+				grid[i][j] = Cell.getCell(cellChars[j], i, j);
 			}
 		}
 		return new SudokuGridMRVCP(grid, subRow, subCol);
 	}
 	
 	@Override public boolean solve() {
-		m_numNodesExpanded++;
 		Cell cell = this.getNextUnoccupiedCell();
 		if(cell == null) return true;
-		HashMap<Cell, List<Integer>> prevStateMap=new HashMap<Cell,List<Integer>>();; 
+		HashMap<Cell, List<Integer>> prevStateMap=new HashMap<Cell,List<Integer>>();
 		try {
 			consPropogate(prevStateMap);
 		} catch (ConstrainedFailedException e) {
@@ -70,17 +42,20 @@ public class SudokuGridMRVCP extends SudokuGrid {
 					cellKey.constraints().remove(iconst);
 				}
 			}
-			System.out.println("In the catch block");
+			//System.out.println("In the catch block");
 			return false;
 		}
+		m_numNodesExpanded++;
 		for(int val = 1; val <= m_size; val++) {
 			if(cell.constraints().contains(val)) continue;
 			if(this.valid(cell.row(), cell.col(), val)) {
 				int prevVal = cell.val();
 				List<Cell> modifiedCells = setVal(cell, val); //m_grid[row][col].setVal(val);
+				this.m_constrainedCells.remove(cell);
 				if(this.solve())
 					return true;
 				cell.setVal(prevVal);
+				this.m_constrainedCells.add(cell);
 				resetVal(modifiedCells, val); //m_grid[row][col].setVal(Cell.DEF);
 			}
 		}
@@ -109,13 +84,13 @@ public class SudokuGridMRVCP extends SudokuGrid {
 	private void generateNeighbor(Cell cell, Queue<Arc> arcQueue){
 		for (int ind = 0; ind < m_size; ind++) {
 			Cell colCell = m_grid[ind][cell.col()];
-			if (cell.row() != ind ){
+			if (cell.row() != ind && !m_grid[ind][cell.col()].solved()){
 				Arc newArc= new Arc(colCell,cell);
 				if(!arcQueue.contains(newArc))
 					arcQueue.add(newArc);
 			}
 			Cell rowCell = m_grid[cell.row()][ind];
-			if (cell.col() != ind) {
+			if (cell.col() != ind && !m_grid[cell.row()][ind].solved()) {
 				Arc newArc= new Arc(rowCell,cell);
 				if(!arcQueue.contains(newArc))
 				arcQueue.add(newArc);
@@ -135,6 +110,7 @@ public class SudokuGridMRVCP extends SudokuGrid {
 			}
 		
 	}
+	
 	private boolean checkArcConstraint(Arc arc,HashMap<Cell,List<Integer>> map) throws ConstrainedFailedException{
 		boolean added = false;
 		for(int val = 1; val <= m_size ; val++){
@@ -159,7 +135,6 @@ public class SudokuGridMRVCP extends SudokuGrid {
 				}
 				
 				arc.getCellx().constraints().add(val);
-				updateTree(arc.getCellx());
 				break;
 			}
 		}
@@ -171,12 +146,13 @@ public class SudokuGridMRVCP extends SudokuGrid {
 		for (int io = 0; io < m_size; io++) {
 			for (int jo = 0; jo < m_size; jo++) {
 				Cell cell = m_grid[io][jo];
+				if(cell.solved()) continue;
 				if (!cell.preFilled()) {
 					for (int ind = 0; ind < m_size; ind++) {
-						if (cell.row() != ind) {
+						if (cell.row() != ind && !m_grid[ind][cell.col()].solved()) {
 							arcQueue.add(new Arc(cell, m_grid[ind][cell.col()]));
 						}
-						if (cell.col() != ind) {
+						if (cell.col() != ind && !m_grid[cell.row()][ind].solved()) {
 							arcQueue.add(new Arc(cell, m_grid[cell.row()][ind]));
 						}
 					}
@@ -184,7 +160,7 @@ public class SudokuGridMRVCP extends SudokuGrid {
 					int n = (cell.col() / m_subCol) * m_subCol;
 					for (int i = m; i < m + m_subRow; i++)
 						for (int j = n; j < n + m_subCol; j++) {
-							if (i == cell.row() && j == cell.col())
+							if (m_grid[i][j].solved() || (i == cell.row() && j == cell.col()))
 								continue;
 							arcQueue.add(new Arc(cell, m_grid[i][j]));
 						}
@@ -193,80 +169,7 @@ public class SudokuGridMRVCP extends SudokuGrid {
 		}
 
 	}
-    
-	private void resetVal(List<Cell> modifiedCells, int k) {
-		for(Cell cell: modifiedCells) {
-			cell.constraints().remove(k);
-			updateTree(cell);
-		}
-	}
-	
-	private List<Cell> setVal(Cell cell, int val) {
-		cell.setVal(val);
-		List<Cell> constraints = addConstraints(cell, val);
-		for(Cell cell1: constraints)
-			this.updateTree(cell1);
-		return constraints;
-	}
-	
-	
-	private void updateTree(Cell cell) {
-		
-		if(new HashSet<Cell>(this.m_constrainedCells).contains(cell)) {
-			this.m_constrainedCells.remove(cell);
-			this.m_constrainedCells.add(cell);
-		}
-	}
-	
-	private List<Cell> addConstraints(Cell cell, int k) {
-		
-		List<Cell> updatedCells = new ArrayList<Cell>(m_size);
-		for(int ind = 0; ind < m_size; ind++) {
-			Cell colCell = m_grid[ind][cell.col()];
-			if(cell.row() != ind && !colCell.constraints().contains(k)) {
-				colCell.constraints().add(k);
-				updatedCells.add(colCell);
-				updateTree(colCell);
-			}
-			Cell rowCell = m_grid[cell.row()][ind];
-			if(cell.col() != ind && !rowCell.constraints().contains(k)) {
-				rowCell.constraints().add(k);
-				updatedCells.add(rowCell);
-				updateTree(rowCell);
-			}
-		}
-		int m = (cell.row()/m_subRow) * m_subRow;
-		int n = (cell.col()/m_subCol) * m_subCol;
-		for(int i = m; i < m + m_subRow; i++)
-			for(int j = n; j < n + m_subCol; j++) {
-				if(i == cell.row() && j == cell.col()) continue;
-				Cell groupCell = m_grid[i][j];
-				if(!groupCell.constraints().contains(k)) {
-					groupCell.constraints().add(k);
-					updatedCells.add(groupCell);
-					updateTree(groupCell);
-				}
-			}
-		return updatedCells;
-	}
-	
-	private boolean valid(int row, int col, int k) {
-		
-		for(int ind = 0; ind < m_size; ind++) {
-			if((row != ind && m_grid[ind][col].val() == k) || 
-					(col != ind && m_grid[row][ind].val() == k))
-				return false;
-		}
-		int m = (row/m_subRow) * m_subRow;
-		int n = (col/m_subCol) * m_subCol;
-		for(int i = m; i < m + m_subRow; i++)
-			for(int j = n; j < n + m_subCol; j++) {
-				if(i == row && j == col) continue;
-				if(this.m_grid[i][j].val() == k)
-				return false;
-			}
-		return true;
-	}
+
 	public static class ConstrainedFailedException extends Exception {
 		/**
 		 * 

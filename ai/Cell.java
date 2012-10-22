@@ -36,12 +36,11 @@ public class Cell implements Comparable<Cell> {
 		m_col = col;
 	}
 
-	public static Cell getCell(char charInp, int row, int col) {
-		
-		switch(charInp) {
-			case '_': return new Cell(DEF, row, col, false);
-			default: return new Cell(Integer.parseInt(String.valueOf(charInp)), row, col, true);
-		}
+	public static Cell getCell(String c, int row, int col) {
+		if("_".equals(c))
+			return new Cell(DEF, row, col, false);
+		else
+			return new Cell(Integer.parseInt(c), row, col, true);
 	}
 
 	int val() {

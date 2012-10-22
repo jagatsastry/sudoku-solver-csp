@@ -3,10 +3,7 @@ package ai;
 public class SudokuGridDFS extends SudokuGrid {
 	
 	private SudokuGridDFS(Cell[][] grid, int subRow, int subCol) {
-		m_size = grid.length;
-		m_grid = grid;
-		m_subRow = subRow;
-		m_subCol = subCol;
+		super(grid, subRow, subCol);
 	}
 	
 	@Override public boolean solve() {
@@ -20,7 +17,7 @@ public class SudokuGridDFS extends SudokuGrid {
 			String row = gridInput[i];
 			String[] cellChars = row.split(",");
 			for(int j = 0; j < cellChars.length; j++)
-				grid[i][j] = Cell.getCell(cellChars[j].charAt(0), i, j);
+				grid[i][j] = Cell.getCell(cellChars[j], i, j);
 		}
 		return new SudokuGridDFS(grid, subRow, subCol);
 	}
@@ -40,22 +37,5 @@ public class SudokuGridDFS extends SudokuGrid {
 			}
 		}
 		return false;	
-	}
-
-	private boolean valid(int row, int col, int k) {
-		
-		for(int ind = 0; ind < m_size; ind++) {
-			if((row != ind && m_grid[ind][col].val() == k) || (col != ind && m_grid[row][ind].val() == k))
-				return false;
-		}
-		int m = (row/m_subRow) * m_subRow;
-		int n = (col/m_subCol) * m_subCol;
-		for(int i = m; i < m + m_subRow; i++)
-			for(int j = n; j < n + m_subCol; j++) {
-				if(i == row && j == col) continue;
-				if(this.m_grid[i][j].val() == k)
-				return false;
-			}
-		return true;
 	}
 }
